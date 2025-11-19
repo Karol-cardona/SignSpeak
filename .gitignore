@@ -1,0 +1,2 @@
+app_models/*
+!app_models/__init__.py
