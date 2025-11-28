@@ -1,7 +1,6 @@
-from pydantic import BaseModel, Field
+# --- START OF FILE schemas.py ---
+from pydantic import BaseModel
 from typing import List, Optional
-
-# This model represents a single {x, y, z, visibility} point
 
 
 class LandmarkPoint(BaseModel):
@@ -10,8 +9,6 @@ class LandmarkPoint(BaseModel):
     z: float
     visibility: Optional[float] = None
 
-# This model represents the handedness information
-
 
 class HandednessInfo(BaseModel):
     score: float
@@ -19,12 +16,13 @@ class HandednessInfo(BaseModel):
     categoryName: str
     displayName: str
 
-# This is the main model for a single frame of data sent from the other backend
-
 
 class FrameData(BaseModel):
-    timestamp: float
-    sequenceNumber: int
-    receivedAt: float
+    # We only need the raw landmarks and handedness for the model
     landmarks: List[List[LandmarkPoint]]
     handedness: List[List[HandednessInfo]]
+
+
+class PredictRequest(BaseModel):
+    session_id: str  # Unique ID for the user (e.g., "user_123")
+    frames: List[FrameData]  # A batch of new frames collected by the app

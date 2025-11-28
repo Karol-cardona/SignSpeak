@@ -3,10 +3,47 @@ from .model import SignLanguageTransformer
 
 # --- Configuration ---
 TARGET_WORDS = [
-    'LIBRARY', 'CELERY', 'PUSH', 'YOU', 'PASSPORT',
-    'GOVERNMENT', 'BYE', 'THANKYOU', 'HELLO', 'MYSELF'
+    # Core Conversation & Greetings
+    'HELLO', 'YES', 'NO', 'PLEASE', 'THANKYOU', 'SORRY',
+    'OK', 'MAYBE', 'NICE', 'MEET', 'GREET2', 'MORE',
+
+    # People & Family
+    'I', 'YOU', 'THEY1', 'MAN', 'WOMAN1', 'BOY', 'CHILD',
+    'CHILDREN', 'FRIEND', 'PERSON', 'PEOPLE', 'FAMILY', 'MOTHER',
+    'PARENTS', 'BROTHER', 'SON', 'HUSBAND',
+    'GRANDMOTHER', 'GRANDFATHER',
+
+    # Question Words
+    'WHO', 'WHAT1', 'WHEN', 'WHERE', 'WHY', 'HOW1',
+
+    # Common Actions & Verbs
+    'EAT1', 'DRINK1', 'GO', 'COME', 'WALK2', 'RUN1',  'SEE',
+    'LOOKAT', 'HEAR2', 'LISTEN', 'WANT1',  'LOVE', 'HATE',
+    'FEEL', 'MAKE', 'WORK', 'PLAY', 'HELP', 'GIVE', 'GET', 'TELL',
+    'ASK', 'KNOW', 'THINK', 'REMEMBER1', 'LEARN', 'UNDERSTAND',
+
+    # Feelings & Descriptions
+    'HAPPY', 'SAD', 'ANGRY', 'TIRED', 'HUNGRY', 'SICK', 'SCARED', 'SURPRISE',
+    'FUNNY', 'SERIOUS', 'RIGHT1', 'WRONG', 'TRUE', 'BIG', 'SMALL', 'TALL1',
+    'PRETTY', 'CUTE1', 'UGLY', 'HOT', 'COLD', 'WARM', 'EASY', 'HARD', 'NEW',
+    'OLD', 'CLEAN', 'DIRTY',
+
+    # Places & Time
+    'HOME',  'CITY1', 'ROOM', 'KITCHEN', 'BATHROOM', 'SHOP1', 'LIBRARY',
+    'TIME', 'DAY', 'NIGHT1', 'MORNING', 'WEEK', 'MONTH', 'YEAR',
+    'TODAY', 'YESTERDAY', 'TOMORROW',
+
+    # Common Objects & Concepts
+    'WATER', 'APPLE', 'BREAD', 'MILK1', 'COFFEE', 'CAR', 'PHONE', 'COMPUTER',
+    'TV', 'BOOK', 'PAPER', 'MONEY1', 'KEY', 'DOOR', 'WINDOW', 'CHAIR',
+    'TABLE', 'COLOR', 'NAME', 'IDEA', 'STORY1', 'JOKE', 'MUSIC', 'GAME',
+
+    # Colors & Connectors
+    'RED', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'IN', 'ON', 'AT',
+    'WITH', 'FOR', 'FROM', 'ABOUT2', 'AND', 'BUT', 'BECAUSE', 'PUSH',
 ]
-CHECKPOINT_PATH = "./checkpoints/best_model.pth"
+
+CHECKPOINT_PATH = "./checkpoints/best_model_28_11.pth"
 INPUT_DIM = 2 * 21 * 3
 EMBED_DIM = 256
 NUM_HEADS = 8

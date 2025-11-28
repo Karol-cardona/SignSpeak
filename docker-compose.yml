@@ -1,7 +1,6 @@
-version: '3.8'
+version: "3.8"
 
 services:
-
   signspeak-backend:
     build:
       context: ./SignSpeakBackend
@@ -19,3 +18,19 @@ services:
       - "5173:80"
     depends_on:
       - signspeak-backend
+
+  signspeak-python:
+    build:
+      context: ./SignSpeakBackend-Python
+      dockerfile: Dockerfile
+    container_name: signspeak-python
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the code so you can edit locally and see changes in Docker
+      - ./SignSpeakBackend-Python:/app
+      # Persist the AI model cache so it doesn't redownload every time
+      - ./SignSpeakBackend-Python/hf_cache:/app/hf_cache
+    environment:
+      - HF_HOME=/app/hf_cache
+    restart: always

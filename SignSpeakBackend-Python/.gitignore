@@ -14,3 +14,8 @@ pip-selfcheck.json
 
 # Temporary files
 temp_*
+__pycache__
+venv
+hf_cache
+*.pyc
+.DS_Store

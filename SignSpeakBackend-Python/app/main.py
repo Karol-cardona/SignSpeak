@@ -1,77 +1,89 @@
+# --- START OF FILE main.py ---
 import torch
 from fastapi import FastAPI, HTTPException
-from typing import List
+from typing import Dict
 
-# Import our new schemas and the updated functions
-from .schemas import FrameData
-from .preprocessing import transform_frames_to_numpy, get_stable_prediction_from_sequence
+from .schemas import PredictRequest
+from .preprocessing import transform_frame_to_numpy
+from .dependencies import get_model
+from .llm_handler import AdvancedSentenceCorrector
+from .session_state import UserSession
 
-# Import existing dependencies
-from .dependencies import get_model, get_target_words
-from .llm_handler import SentenceGenerator
+app = FastAPI(title="Real-Time Sign Language API with Voting Logic")
 
-app = FastAPI(title="Sign Language API with Landmark Input and Smoothing")
-
-# --- Load Models ---
+# --- Load Resources ---
 sign_model, device = get_model()
-target_words = get_target_words()
-llm_handler = SentenceGenerator()
+llm_handler = AdvancedSentenceCorrector()
 
-# --- In-memory buffer for sentence building ---
-word_buffer = []
+# --- Global Session Storage ---
+# Key: session_id (str), Value: UserSession object
+# In production, use Redis. For this demo, memory is fine.
+sessions: Dict[str, UserSession] = {}
 
 
-@app.get("/", summary="Health Check")
+@app.get("/")
 def read_root():
-    return {"status": "ok", "message": "API is running!"}
+    return {"status": "ok", "message": "SignSpeak API is running"}
 
 
-@app.post("/predict_landmarks", summary="Predict Sign from a Landmark Sequence with Smoothing")
-async def predict_landmarks(frames: List[FrameData]):
+@app.post("/process_frames", summary="Process a batch of frames for a user session")
+async def process_frames(request: PredictRequest):
     """
-    Receives a sequence of landmark data, uses smoothing to get a stable prediction,
-    and adds the resulting word to the sentence buffer.
+    Receives a batch of frames (e.g., last 100ms of video).
+    Feeds them sequentially into the user's session logic (mimicking realtime_test.py).
+    Returns the current state of the sentence.
     """
-    global word_buffer
+    session_id = request.session_id
 
-    # Step 1: Transform the incoming JSON data into a NumPy array
-    landmark_sequence = transform_frames_to_numpy(frames)
+    # 1. Retrieve or Create Session
+    if session_id not in sessions:
+        sessions[session_id] = UserSession()
+        print(f"Created new session: {session_id}")
 
-    if landmark_sequence is None or landmark_sequence.shape[0] == 0:
-        raise HTTPException(
-            status_code=400, detail="Invalid or empty landmark data provided.")
+    session = sessions[session_id]
 
-    # --- Step 2: Get the stable prediction using our new smoothing function ---
-    stable_prediction = get_stable_prediction_from_sequence(
-        landmark_sequence=landmark_sequence,
-        model=sign_model,
-        device=device,
-        target_words=target_words,
-        model_expected_frames=60,  # The size your model expects
-        num_augmentations=10      # How many "votes" to generate. Can be tuned.
-    )
+    response_data = {
+        "session_id": session_id,
+        "new_word": None,
+        "final_sentence": session.final_llm_sentence,
+        "current_builder": session.current_sentence_words,
+        "status": "processing"
+    }
 
-    if stable_prediction is None:
-        raise HTTPException(
-            status_code=400, detail="Could not determine a stable prediction from the provided sequence.")
+    # 2. Iterate through EVERY frame in the batch
+    # This ensures we don't skip the "sliding window" logic
+    for frame_data in request.frames:
 
-    # Step 3: Apply the sentence-building logic (this part remains the same)
-    if stable_prediction == 'PUSH':
-        if not word_buffer:
-            return {"prediction": "PUSH", "status": "end_of_sentence", "sentence": ""}
+        # Convert JSON -> Numpy
+        landmark_np = transform_frame_to_numpy(frame_data)
 
-        final_sentence = llm_handler.correct_sentence(word_buffer)
-        word_buffer = []
+        # Process logic
+        result = session.process_new_landmarks(
+            landmark_np,
+            sign_model,
+            device,
+            llm_handler
+        )
 
-        return {
-            "prediction": "PUSH",
-            "status": "end_of_sentence",
-            "sentence": final_sentence
-        }
-    else:
-        word_buffer.append(stable_prediction)
-        return {
-            "prediction": stable_prediction,
-            "status": "word_added",
-            "current_words": word_buffer
-        }
+        # Update response if something interesting happened
+        if result["event"] == "WORD_ADDED":
+            response_data["new_word"] = result["payload"]
+            response_data["status"] = "word_added"
+            # We don't break; we keep processing remaining frames in case PUSH follows immediately
+
+        elif result["event"] == "SENTENCE_COMPLETED":
+            response_data["final_sentence"] = result["payload"]
+            response_data["status"] = "sentence_completed"
+            response_data["current_builder"] = []  # Reset in response too
+
+    # 3. Return the latest state
+    # The app should display 'current_builder' and if 'final_sentence' is not empty, show that.
+    return response_data
+
+
+@app.post("/reset_session/{session_id}")
+def reset_session(session_id: str):
+    if session_id in sessions:
+        del sessions[session_id]
+        return {"status": "reset", "message": "Session memory cleared"}
+    return {"status": "error", "message": "Session not found"}
