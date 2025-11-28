@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,13 +18,16 @@ public class MLSystemService {
 
     private static final Logger logger = LoggerFactory.getLogger(MLSystemService.class);
 
-    @Value("${ml.system.url:http://localhost:8081/ml/process}")
+    @Value("${ml.system.url:http://host.docker.internal:8000/api/predict_landmarks}")
     private String mlSystemUrl;
+
+    private final NotificationService notificationService;
 
     private final RestTemplate restTemplate;
 
-    public MLSystemService() {
+    public MLSystemService(NotificationService notificationService) {
         this.restTemplate = new RestTemplate();
+        this.notificationService = notificationService;
     }
 
     public void sendFrames(List<FrameData> frames) {
@@ -37,6 +41,8 @@ public class MLSystemService {
 
              String response = restTemplate.postForObject(mlSystemUrl, request, String.class);
              logger.info("ML system response: {}", response);
+
+            notificationService.sendToClients(response);
 
             logger.info("Frames that would be sent to ML system:");
             frames.forEach(frame -> {
@@ -55,7 +61,10 @@ public class MLSystemService {
                         handInfo);
             });
 
-        } catch (Exception e) {
+        } catch (MessagingException e) {
+            logger.error("Error sending message to the frontend", e);
+        }
+        catch (Exception e) {
             logger.error("Error sending frames to ML system", e);
         }
     }

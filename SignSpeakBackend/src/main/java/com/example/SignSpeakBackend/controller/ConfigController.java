@@ -18,24 +18,24 @@ public class ConfigController {
         this.frameBufferService = frameBufferService;
     }
     
-    @GetMapping("/config")
-    public ResponseEntity<Map<String, Object>> getConfig() {
-        Map<String, Object> config = new HashMap<>();
-        config.put("frameSelectionCount", frameBufferService.getFrameSelectionCount());
-        config.put("bufferSize", frameBufferService.getBufferSize());
-        return ResponseEntity.ok(config);
-    }
-    
-    @PostMapping("/config/frame-count")
-    public ResponseEntity<Map<String, Object>> updateFrameCount(@RequestBody Map<String, Integer> request) {
-        Integer count = request.get("count");
-        if (count != null && count > 0) {
-            frameBufferService.setFrameSelectionCount(count);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("frameSelectionCount", count);
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Invalid count"));
-    }
+//    @GetMapping("/config")
+//    public ResponseEntity<Map<String, Object>> getConfig() {
+//        Map<String, Object> config = new HashMap<>();
+//        config.put("frameSelectionCount", frameBufferService.getFrameSelectionCount());
+//        config.put("bufferSize", frameBufferService.getBufferSize());
+//        return ResponseEntity.ok(config);
+//    }
+//
+//    @PostMapping("/config/frame-count")
+//    public ResponseEntity<Map<String, Object>> updateFrameCount(@RequestBody Map<String, Integer> request) {
+//        Integer count = request.get("count");
+//        if (count != null && count > 0) {
+//            frameBufferService.setFrameSelectionCount(count);
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("success", true);
+//            response.put("frameSelectionCount", count);
+//            return ResponseEntity.ok(response);
+//        }
+//        return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Invalid count"));
+//    }
 }

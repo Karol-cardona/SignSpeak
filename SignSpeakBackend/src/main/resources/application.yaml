@@ -9,11 +9,19 @@ server:
 
 ml:
   system:
-    url: http://localhost:8081/ml/process #Link to ml system
+    url: http://host.docker.internal:8000/api/predict_landmarks #Link to ml system
 
 frame:
   selection:
     count: 30
+
+buffer:
+  max:
+    size: 120        # Trigger evacuation at this size
+  evacuate:
+    count: 80   # Send this many oldest frames
+  retain:
+    count: 40     # Keep this many newest frames
 
 logging:
   level:

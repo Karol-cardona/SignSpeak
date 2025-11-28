@@ -170,7 +170,7 @@ this.stompClient.publish({
 
 **Might be cool to have the same fields name in the ML system. (So, If a field is not needed, you can just ignore it and I will not need to modify the fields name again 😈)**
 
-- I assume the ML client url to send the data to is: http://localhost:8081/ml/process
+- I assume the ML client url to send the data to is: http://host.docker.internal:8000/api/predict_landmarks
 
 
 According to that: 
