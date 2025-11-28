@@ -9,11 +9,10 @@ export class WebSocketManager {
 
     /**
      * Establishes a STOMP connection.
-     * @param {object} callbacks - An object with { onOpen, onMessage, onError, onClose }
      */
-    connect(callbacks = {}) {
-        // Provide default empty functions for callbacks
+    connect(callbacks = {}, meetingId) {
         const { onOpen = () => {}, onMessage = () => {}, onError = () => {}, onClose = () => {} } = callbacks;
+
         try {
             const socket = new SockJS('http://localhost:8080/ws');
 
@@ -32,37 +31,36 @@ export class WebSocketManager {
                 debug: (str) => {
                     console.log('STOMP: ' + str);
                 },
-                reconnectDelay: 0,
-                heartbeatIncoming: 0,
-                heartbeatOutgoing: 0,
+                reconnectDelay: 5000,
+                heartbeatIncoming: 4000,
+                heartbeatOutgoing: 4000,
             });
 
-            // Handle the successful connection event
             this.stompClient.onConnect = () => {
                 console.log('STOMP: Connected to WebSocket');
                 onOpen();
 
-                // Subscribe to the topic to receive translations
-                this.stompClient.subscribe('/topic/status', (message) => {
-                    console.log('STOMP: Message received:', message.body);
+                const subscriptionTopic = `/topic/meeting/${meetingId}`;
+
+                console.log(`STOMP: Subscribing to: ${subscriptionTopic}`);
+
+                this.stompClient.subscribe(subscriptionTopic, (message) => {
+                    console.log('STOMP: Message received from topic:', subscriptionTopic);
                     onMessage(message.body);
                 });
             };
 
-            // Handle STOMP errors
             this.stompClient.onStompError = (frame) => {
                 console.error('STOMP Error: ' + frame.headers['message']);
                 console.error('STOMP Details: ' + frame.body);
                 onError(frame);
             };
 
-            // Handle disconnection
             this.stompClient.onDisconnect = (frame) => {
                 console.log('STOMP: Disconnected');
                 onClose(frame);
             };
 
-            // Activate the client to start the connection
             this.stompClient.activate();
         } catch (error){
             console.error("Failed to initialize connection:", error);
@@ -73,33 +71,46 @@ export class WebSocketManager {
     /**
      * Sends hand landmark data to the backend.
      */
-    sendHandData(results, timestamp) {
+    sendHandData(results, timestamp, userInfo) {
         if (!this.stompClient || !this.stompClient.connected) {
-            console.warn("STOMP client is not connected. Cannot send data.");
             return;
         }
 
         const dataPacket = {
             timestamp: timestamp,
             landmarks: results.landmarks,
-            handedness: results.handedness
+            handedness: results.handedness,
+            userInfo: userInfo
         };
 
-        // Publish the data to the correct destination
         this.stompClient.publish({
             destination: '/app/frame',
             body: JSON.stringify(dataPacket)
         });
     }
 
-    /**
-     * Deactivates the STOMP client (closes the connection).
-     */
     disconnect() {
         if (this.stompClient && this.stompClient.connected) {
             this.stompClient.deactivate();
-        } else {
-            console.log("STOMP client already disconnected or not initialized.");
+            console.log("STOMP client deactivated.");
         }
     }
+
+    /**
+     * Send a command to the backend to make all connected clients talk.
+     */
+    sendAudioTrigger(text, meetingId) {
+        if (!this.stompClient || !this.stompClient.connected) return;
+
+        const payload = {
+            text: text,
+            meetingId: meetingId
+        };
+
+        this.stompClient.publish({
+            destination: '/app/speak',
+            body: JSON.stringify(payload)
+        });
+    }
+
 }
