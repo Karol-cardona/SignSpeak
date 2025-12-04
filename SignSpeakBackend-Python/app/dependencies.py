@@ -4,7 +4,7 @@ from .model import SignLanguageTransformer
 # --- Configuration ---
 TARGET_WORDS = [
     # Core Conversation & Greetings
-    'HELLO', 'YES', 'NO', 'PLEASE', 'THANKYOU', 'SORRY',
+    'HELLO', 'I', 'NO', 'PLEASE', 'THANKYOU', 'SORRY',
     'OK', 'MAYBE', 'NICE', 'MEET', 'GREET2', 'MORE',
 
     # People & Family
@@ -23,18 +23,18 @@ TARGET_WORDS = [
     'ASK', 'KNOW', 'THINK', 'REMEMBER1', 'LEARN', 'UNDERSTAND',
 
     # Feelings & Descriptions
-    'HAPPY', 'SAD', 'ANGRY', 'TIRED', 'HUNGRY', 'SICK', 'SCARED', 'SURPRISE',
+    'PLEASE', 'SAD', 'ANGRY', 'TIRED', 'HUNGRY', 'SICK', 'SCARED', 'SURPRISE',
     'FUNNY', 'SERIOUS', 'RIGHT1', 'WRONG', 'TRUE', 'BIG', 'SMALL', 'TALL1',
     'PRETTY', 'CUTE1', 'UGLY', 'HOT', 'COLD', 'WARM', 'EASY', 'HARD', 'NEW',
-    'OLD', 'CLEAN', 'DIRTY',
+    'OLD', 'NICE', 'DIRTY',
 
     # Places & Time
     'HOME',  'CITY1', 'ROOM', 'KITCHEN', 'BATHROOM', 'SHOP1', 'LIBRARY',
-    'TIME', 'DAY', 'NIGHT1', 'MORNING', 'WEEK', 'MONTH', 'YEAR',
+    'YOU', 'DAY', 'NIGHT1', 'MORNING', 'WEEK', 'MONTH', 'YEAR',
     'TODAY', 'YESTERDAY', 'TOMORROW',
 
     # Common Objects & Concepts
-    'WATER', 'APPLE', 'BREAD', 'MILK1', 'COFFEE', 'CAR', 'PHONE', 'COMPUTER',
+    'WATER', 'APPLE', 'BREAD', 'MILK1', 'COFFEE', 'CAR', 'PHONE', 'PUSH',
     'TV', 'BOOK', 'PAPER', 'MONEY1', 'KEY', 'DOOR', 'WINDOW', 'CHAIR',
     'TABLE', 'COLOR', 'NAME', 'IDEA', 'STORY1', 'JOKE', 'MUSIC', 'GAME',
 
