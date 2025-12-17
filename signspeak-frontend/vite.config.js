@@ -17,7 +17,14 @@ export default defineConfig({
 
         allowedHosts: [
             "hygrophytic-aniyah-wretched.ngrok-free.dev"
-        ]
+        ],
+        proxy: {
+            '/ws': {
+                target: 'http://localhost:8080', // Gira tutto al backend locale
+                ws: true,                        // Importante per i WebSocket
+                changeOrigin: true
+            }
+        }
     }
 
 })

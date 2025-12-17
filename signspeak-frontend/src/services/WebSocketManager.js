@@ -14,8 +14,8 @@ export class WebSocketManager {
         const { onOpen = () => {}, onMessage = () => {}, onError = () => {}, onClose = () => {} } = callbacks;
 
         try {
-            const socket = new SockJS('http://localhost:8080/ws');
-            //const socket = new SockJS('https://hygrophytic-aniyah-wretched.ngrok-free.dev/ws');
+            //const socket = new SockJS('http://localhost:8080/ws');
+            const socket = new SockJS('/ws');
 
 
             socket.onclose = (event) => {

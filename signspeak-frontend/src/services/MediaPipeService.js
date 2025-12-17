@@ -28,7 +28,6 @@ export class MediaPipeService {
             },
             runningMode: "VIDEO",
             numHands: 2,
-            // Aggiungiamo confidenza minima per ridurre il rumore
             minHandDetectionConfidence: 0.7,
             minHandPresenceConfidence: 0.7,
             minTrackingConfidence: 0.7
@@ -51,9 +50,6 @@ export class MediaPipeService {
 
     /**
      * HELPER: Formatta i risultati per il Backend Python.
-     * Il backend (preprocessing.py) si aspetta RIGOROSAMENTE:
-     * - Index 0: Dati Mano Destra (o lista vuota)
-     * - Index 1: Dati Mano Sinistra (o lista vuota)
      */
     formatResults(results) {
         let landmarksPayload = [[], []];
@@ -75,19 +71,12 @@ export class MediaPipeService {
                     continue;
                 }
 
-                let categoryName = handedness.categoryName; // "Left" o "Right"
-
-                // Se noti che le mani sono scambiate (il modello predice male quando usi una mano sola),
-                // DECOMMENTA queste righe per invertire le etichette:
-                // categoryName = (categoryName === "Right") ? "Left" : "Right";
-
+                let categoryName = handedness.categoryName;
                 let targetIndex = (categoryName === 'Right') ? 0 : 1;
 
                 // --- FIX 2: COORDINATE MIRRORING ---
-                // Python usa cv2.flip(1). Qui dobbiamo simularlo matematicamente.
-                // Invertiamo l'asse X:  x_new = 1.0 - x_old
                 const formattedPoints = rawLandmarks.map(lm => ({
-                    x: 1.0 - lm.x,  // <--- ECCO IL TRUCCO PER L'ACCURACY
+                    x: 1.0 - lm.x,
                     y: lm.y,
                     z: lm.z,
                     visibility: lm.visibility ?? 1.0
@@ -130,11 +119,18 @@ export class MediaPipeService {
             // Perform landmark detection
             this.results = this.handLandmarker.detectForVideo(videoElement, nowInMs);
 
-            // MODIFICA: Formattiamo SEMPRE i risultati e li inviamo, anche se vuoti.
-            // Questo permette al backend di sapere che non stai facendo gesti.
             if (this.results) {
                 const formattedData = this.formatResults(this.results);
-                this.onResultsCallback(formattedData, nowInMs);
+
+                // --- MODIFICA QUI ---
+                // Controlliamo se ci sono dati nella mano destra (index 0) o sinistra (index 1)
+                const hasRightHand = formattedData.landmarks[0] && formattedData.landmarks[0].length > 0;
+                const hasLeftHand = formattedData.landmarks[1] && formattedData.landmarks[1].length > 0;
+
+                // Inviamo i dati SOLO se almeno una mano è rilevata e valida (non filtrata)
+                if (hasRightHand || hasLeftHand) {
+                    this.onResultsCallback(formattedData, nowInMs);
+                }
             }
         }
 
