@@ -1,105 +1,140 @@
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 /**
  * Manages the STOMP connection over SockJS to the backend.
  */
 export class WebSocketManager {
-    stompClient = null;
+  stompClient = null;
 
-    /**
-     * Establishes a STOMP connection.
-     * @param {object} callbacks - An object with { onOpen, onMessage, onError, onClose }
-     */
-    connect(callbacks = {}) {
-        // Provide default empty functions for callbacks
-        const { onOpen = () => {}, onMessage = () => {}, onError = () => {}, onClose = () => {} } = callbacks;
-        try {
-            const socket = new SockJS('http://localhost:8080/ws');
+  /**
+   * Establishes a STOMP connection.
+   */
+  connect(callbacks = {}, meetingId) {
+    const {
+      onOpen = () => {},
+      onMessage = () => {},
+      onError = () => {},
+      onClose = () => {},
+    } = callbacks;
 
-            socket.onclose = (event) => {
-                console.error('SockJS connection closed:', event.reason || 'Cannot connect');
-                onClose(event);
-            };
+    try {
+      const socket = new SockJS("http://localhost:8080/ws");
 
-            socket.onerror = (error) => {
-                console.error('SockJS error:', error);
-                onError(error);
-            };
+      socket.onclose = (event) => {
+        console.error(
+          "SockJS connection closed:",
+          event.reason || "Cannot connect"
+        );
+        onClose(event);
+      };
 
-            this.stompClient = new Client({
-                webSocketFactory: () => socket,
-                debug: (str) => {
-                    console.log('STOMP: ' + str);
-                },
-                reconnectDelay: 0,
-                heartbeatIncoming: 0,
-                heartbeatOutgoing: 0,
-            });
+      socket.onerror = (error) => {
+        console.error("SockJS error:", error);
+        onError(error);
+      };
 
-            // Handle the successful connection event
-            this.stompClient.onConnect = () => {
-                console.log('STOMP: Connected to WebSocket');
-                onOpen();
+      this.stompClient = new Client({
+        webSocketFactory: () => socket,
+        debug: (str) => {
+          console.log("STOMP: " + str);
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+      });
 
-                // Subscribe to the topic to receive translations
-                this.stompClient.subscribe('/topic/status', (message) => {
-                    console.log('STOMP: Message received:', message.body);
-                    onMessage(message.body);
-                });
-            };
+      this.stompClient.onConnect = () => {
+        console.log("STOMP: Connected to WebSocket");
+        onOpen();
 
-            // Handle STOMP errors
-            this.stompClient.onStompError = (frame) => {
-                console.error('STOMP Error: ' + frame.headers['message']);
-                console.error('STOMP Details: ' + frame.body);
-                onError(frame);
-            };
+        const subscriptionTopic = `/topic/meeting/${meetingId}`;
 
-            // Handle disconnection
-            this.stompClient.onDisconnect = (frame) => {
-                console.log('STOMP: Disconnected');
-                onClose(frame);
-            };
+        console.log(`STOMP: Subscribing to: ${subscriptionTopic}`);
 
-            // Activate the client to start the connection
-            this.stompClient.activate();
-        } catch (error){
-            console.error("Failed to initialize connection:", error);
-            onError(error);
-        }
-    }
-
-    /**
-     * Sends hand landmark data to the backend.
-     */
-    sendHandData(results, timestamp) {
-        if (!this.stompClient || !this.stompClient.connected) {
-            console.warn("STOMP client is not connected. Cannot send data.");
-            return;
-        }
-
-        const dataPacket = {
-            timestamp: timestamp,
-            landmarks: results.landmarks,
-            handedness: results.handedness
-        };
-
-        // Publish the data to the correct destination
-        this.stompClient.publish({
-            destination: '/app/frame',
-            body: JSON.stringify(dataPacket)
+        this.stompClient.subscribe(subscriptionTopic, (message) => {
+          console.log("STOMP: Message received from topic:", subscriptionTopic);
+          onMessage(message.body);
         });
+      };
+
+      this.stompClient.onStompError = (frame) => {
+        console.error("STOMP Error: " + frame.headers["message"]);
+        console.error("STOMP Details: " + frame.body);
+        onError(frame);
+      };
+
+      this.stompClient.onDisconnect = (frame) => {
+        console.log("STOMP: Disconnected");
+        onClose(frame);
+      };
+
+      this.stompClient.activate();
+    } catch (error) {
+      console.error("Failed to initialize connection:", error);
+      onError(error);
+    }
+  }
+
+  /**
+   * Sends hand landmark data to the backend.
+   */
+  sendHandData(results, timestamp, userInfo) {
+    if (!this.stompClient || !this.stompClient.connected) {
+      return;
     }
 
-    /**
-     * Deactivates the STOMP client (closes the connection).
-     */
-    disconnect() {
-        if (this.stompClient && this.stompClient.connected) {
-            this.stompClient.deactivate();
-        } else {
-            console.log("STOMP client already disconnected or not initialized.");
-        }
+    const dataPacket = {
+      timestamp: timestamp,
+      landmarks: results.landmarks,
+      handedness: results.handedness,
+      userInfo: userInfo,
+    };
+
+    this.stompClient.publish({
+      destination: "/app/frame",
+      body: JSON.stringify(dataPacket),
+    });
+  }
+
+  disconnect() {
+    if (this.stompClient && this.stompClient.connected) {
+      this.stompClient.deactivate();
+      console.log("STOMP client deactivated.");
     }
+  }
+
+  /**
+   * Send a command to the backend to make all connected clients talk.
+   */
+  sendAudioTrigger(text, meetingId) {
+    if (!this.stompClient || !this.stompClient.connected) return;
+
+    const payload = {
+      text: text,
+      meetingId: meetingId,
+    };
+
+    this.stompClient.publish({
+      destination: "/app/speak",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /**
+   * Send a command to clear the translation buffer on the backend
+   */
+  sendClearBuffer(meetingId) {
+    if (!this.stompClient || !this.stompClient.connected) return;
+
+    const payload = {
+      type: "CLEAR",
+      meetingId: meetingId || "",
+    };
+
+    this.stompClient.publish({
+      destination: "/app/clear", // Assicurati che il Backend gestisca questo endpoint o gestiscilo in '/app/frame' con un flag
+      body: JSON.stringify(payload),
+    });
+  }
 }

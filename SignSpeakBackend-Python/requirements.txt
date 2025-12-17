@@ -1,11 +1,7 @@
 fastapi
 uvicorn[standard]
-torch
 opencv-python-headless
 mediapipe
 numpy
 python-multipart
-transformers
-sentencepiece
-google.generativeai
-itertools
+openai

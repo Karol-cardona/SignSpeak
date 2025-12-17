@@ -2,6 +2,7 @@
 from collections import deque, Counter
 import numpy as np
 import torch
+import time
 import re
 from .llm_handler import AdvancedSentenceCorrector
 # IMPORT TARGET_WORDS FROM DEPENDENCIES TO ENSURE CONSISTENCY
@@ -48,6 +49,51 @@ class UserSession:
         self.final_llm_sentence = ""
         self.status_message = "Listening..."
 
+    def reset(self, clear_sentence: bool = True):
+        """
+        Hard Reset: Wipes the landmark buffer AND the current sentence builder.
+        This ensures the user starts completely fresh.
+        """
+        # 1. Clear Model Buffers (Memory)
+        self.landmark_buffer.clear()
+        self.voting_deque.clear()
+
+        # 2. Clear Sentence State (The "Puffer")
+        # Unconditionally clear the words being built
+        self.current_sentence_words = []
+        self.last_confirmed_word = ""
+
+        # 3. Clear Final Output if requested
+        if clear_sentence:
+            self.final_llm_sentence = ""
+
+        self.status_message = "Listening..."
+
+    def force_complete(self, llm_handler: AdvancedSentenceCorrector):
+        """
+        Force completion of the current sentence by calling the LLM on the
+        current_sentence_words. Returns the finalized sentence string.
+        """
+        if not self.current_sentence_words:
+            return ""
+
+        try:
+            self.status_message = "Translating..."
+            sentence = llm_handler.correct_sentence(
+                self.current_sentence_words)
+            self.final_llm_sentence = sentence
+
+            # Reset builder and voting so a new sentence can start immediately
+            self.current_sentence_words = []
+            self.voting_deque.clear()
+            self.last_confirmed_word = ""
+
+            print(f"[session_state] Forced sentence complete: {sentence}")
+            return sentence
+        except Exception as e:
+            print(f"[session_state] Error in force_complete: {e}")
+            return ""
+
     def process_new_landmarks(self, new_landmarks_np, model, device, llm_handler):
         """
         Ingests a single frame of landmarks, runs prediction, voting, 
@@ -70,12 +116,20 @@ class UserSession:
 
             # Run Model
             with torch.no_grad():
+                t0 = time.time()
                 outputs = model(features)
+                infer_ms = (time.time() - t0) * 1000.0
+                # print(f"[session_state] Inference time: {infer_ms:.1f} ms") # Uncomment if needed
                 probabilities = torch.nn.functional.softmax(outputs, dim=1)
                 confidence, predicted_idx = torch.max(probabilities, 1)
 
                 raw_word = TARGET_WORDS[predicted_idx.item()]
                 conf_val = confidence.item()
+
+            # --- DEBUG PRINT ---
+            print(
+                f"🔎 Model sees: {raw_word} (Confidence: {conf_val:.2f}) | Voting Queue: {len(self.voting_deque)}")
+            # -------------------
 
             # Add to Voting Deque
             if conf_val > CONFIDENCE_THRESHOLD:
@@ -87,6 +141,12 @@ class UserSession:
             if len(self.voting_deque) == VOTING_WINDOW_SIZE:
                 vote_counts = Counter(self.voting_deque)
                 top_word, count = vote_counts.most_common(1)[0]
+
+                # --- DEBUG PRINT ---
+                if top_word != "UNCERTAIN" and count > 10:
+                    print(
+                        f"🔥 VOTING CONSENSUS: {top_word} ({count}/{VOTING_WINDOW_SIZE})")
+                # -------------------
 
                 if top_word != "UNCERTAIN" and count >= VOTE_THRESHOLD:
                     # New stable word detected?
@@ -102,6 +162,8 @@ class UserSession:
                             self.current_sentence_words = []
                             self.voting_deque.clear()
                             self.last_confirmed_word = ""
+                            print(
+                                f"🚀 SENTENCE COMPLETED: {self.final_llm_sentence}")
                             return {"event": "SENTENCE_COMPLETED", "payload": self.final_llm_sentence}
 
                         else:
@@ -109,6 +171,7 @@ class UserSession:
                             self.current_sentence_words.append(clean_word)
                             self.last_confirmed_word = top_word
                             self.status_message = f"Added: {clean_word}"
+                            print(f"✅ WORD ADDED: {clean_word}")
                             return {"event": "WORD_ADDED", "payload": clean_word}
 
         return {"event": "PROCESSING", "payload": None}

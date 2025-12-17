@@ -1,36 +1,50 @@
 version: "3.8"
 
 services:
+  # --- UPDATED ML SERVICE ---
+  signspeak-ml:
+    build:
+      context: ./SignSpeakBackend-Python # CHANGED: Point to new folder
+      dockerfile: Dockerfile
+    container_name: signspeak-ml
+    # env_file:
+    #   - ./SignSpeakBackend-Python/.env # Uncomment if you have a .env file in the new folder
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Map the 'app' folder from the new directory to the container
+      - ./SignSpeakBackend-Python/app:/app/app
+      # Note: Since 'checkpoints' is inside 'app' in your screenshot, the line above covers it.
+
+  # --- UPDATED JAVA BACKEND ---
   signspeak-backend:
     build:
-      context: ./SignSpeakBackend
+      context: ./SignSpeakBackend-Java
       dockerfile: Dockerfile
     container_name: signspeak-backend
     ports:
       - "8080:8080"
+    environment:
+      # --- IMPORTANT CHANGE ---
+      # We point to signspeak-ml on port 8000, but use the path from the README
+      # - ML_SYSTEM_URL=http://signspeak-ml:8000/ml/process
+      - ML_SYSTEM_URL=http://signspeak-ml:8000/api/predict_landmarks
+    depends_on:
+      - signspeak-ml
 
   signspeak-frontend:
     build:
       context: ./signspeak-frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: signspeak-frontend
     ports:
-      - "5173:80"
+      - "5173:5173"
+    volumes:
+      - ./signspeak-frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       - signspeak-backend
-
-  signspeak-python:
-    build:
-      context: ./SignSpeakBackend-Python
-      dockerfile: Dockerfile
-    container_name: signspeak-python
-    ports:
-      - "8000:8000"
-    volumes:
-      # Mount the code so you can edit locally and see changes in Docker
-      - ./SignSpeakBackend-Python:/app
-      # Persist the AI model cache so it doesn't redownload every time
-      - ./SignSpeakBackend-Python/hf_cache:/app/hf_cache
-    environment:
-      - HF_HOME=/app/hf_cache
-    restart: always

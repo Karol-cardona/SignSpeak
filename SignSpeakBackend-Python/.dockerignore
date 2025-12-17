@@ -1,0 +1,20 @@
+# Ignore the virtual environment (This is huge and causes crashes!)
+venv/
+.venv/
+env/
+
+# Ignore git history
+.git/
+
+# Ignore python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore cached models (they will be downloaded inside or mapped via volumes)
+hf_cache/
+
+# Ignore system files
+.DS_Store
+Thumbs.db

@@ -1,162 +1,52 @@
-import React, { useState, useRef } from 'react';
-
-import { getWebcamStream } from '../services/WebcamCaptureService';
-import { MediaPipeService } from '../services/MediaPipeService';
-import { WebSocketManager } from '../services/WebSocketManager';
+import "../styles/TranslationPage.css";
+import { useTranslation } from '../context/TranslationContext';
 import ControlPanel from '../components/ControlPanel';
 import VideoDisplay from '../components/VideoDisplay';
-import TextDisplay from '../components/TextDisplay';
+import { HiMiniSpeakerWave } from "react-icons/hi2";
+import { MdOutlineTextIncrease, MdOutlineTextDecrease } from "react-icons/md";
+import { FiSettings } from "react-icons/fi";
+import { VscDebugRestart } from "react-icons/vsc";
 
 function TranslationPage() {
+    const {
+        mediaStream, isWebcamOn, status, toggleWebcam,
+        translatedText, partialWords, readAloud,
+        fontSize, increaseFont, decreaseFont,
+        videoRef, pipWindow,
+        setShowConfigModal,
+        restartTranslation
+    } = useTranslation();
 
-    const [mediaStream, setMediaStream] = useState(null);
-    const [isWebcamOn, setIsWebcamOn] = useState(false);
-    const videoRef = useRef(null);
-    const mediaPipeService = useRef(new MediaPipeService()).current;
-    const wsManager = useRef(new WebSocketManager()).current;
-    const [status, setStatus] = useState('IDLE');
-    const [translatedText, setTranslatedText] = useState('');
-
-    /**
-     * Handles incoming messages from the WebSocket.
-     * Expects either status messages (plain text) or translations (JSON).
-     */
-    const handleBackendMessage = (message) => {
-        if (message && typeof message === 'string' && message.trim().startsWith('{')) {
-
-            try {
-                const data = JSON.parse(message);
-
-                if (data.text) {
-                    setTranslatedText(data.text);
-
-                    console.log("Final translation received. Disconnecting.");
-                    wsManager.disconnect();
-
-                    setStatus('IDLE');
-                }
-            } catch (error) {
-                console.error("Failed to parse malformed JSON message:", error, message);
-            }
-
-        }
-    };
-
-    /**
-     * Callback for MediaPipe. Sends landmarks to the WebSocketManager.
-     */
-    const handleLandmarks = (results, timestamp) => {
-        if (results) {
-            wsManager.sendHandData(results, timestamp);
-        }
-    };
-
-    /**
-     * Starts the entire process: connection, webcam, and MediaPipe.
-     */
-    const handleStart = async () => {
-        console.log("Connecting to Websocket...");
-        setStatus('CONNECTING');
-        setTranslatedText('');
-
-        wsManager.connect({
-            onOpen: async () => {
-                console.log("Websocket Connected. Requesting webcam...");
-                const stream = await getWebcamStream();
-
-                if (stream) {
-                    setMediaStream(stream);
-                    setIsWebcamOn(true);
-                    setStatus('LISTENING');
-
-                    console.log("Initializing MediaPipe...");
-                    await mediaPipeService.initialize(handleLandmarks);
-
-                    setTimeout(() => {
-                        if (videoRef.current) {
-                            mediaPipeService.startProcessing(videoRef.current);
-                            console.log("MediaPipe processing started.");
-                        }
-                    }, 100);
-                } else {
-                    console.log("Webcam permission denied.");
-                    setStatus('IDLE');
-                    wsManager.disconnect();
-                }
-            },
-            onMessage: handleBackendMessage,
-            onError: (error) => {
-                console.error("Failed to connect to WebSocket.", error);
-                setStatus('ERROR');
-            },
-            onClose: () => {
-                setStatus((currentState) => {
-                    if (currentState !== 'IDLE' && currentState !== 'ERROR') {
-                        console.log("WebSocket connection closed by server.");
-                        return 'ERROR';
-                    }
-                    return currentState;
-                });
-            }
-        });
-    };
-
-    /**
-     * Stops the webcam and MediaPipe, then waits for the final translation.
-     */
-    const handleStop = () => {
-        console.log("Stopping webcam... waiting for final translation");
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-        }
-        setMediaStream(null);
-        setIsWebcamOn(false);
-
-        mediaPipeService.stopProcessing();
-
-        setStatus('PROCESSING')
-    };
-
-    /**
-     * Single handler for the Start/Stop button.
-     */
-    const toggleWebcam = () => {
-        if (isWebcamOn) {
-            handleStop();
-        } else {
-            handleStart();
-        }
-    };
-
-    /**
-     * Simulation function for testing the UI.
-     */
-    const simulateReceive = () => {
-        const mockMessage = JSON.stringify({ text: "This is a simulated translation from the backend." });
-        handleBackendMessage(mockMessage);
-    };
 
     return (
-        <main className="main-content">
+        <main className="translation-content">
 
             <section className="video-section">
-                <VideoDisplay
-                    ref={videoRef}
-                    status={status}
-                    stream={mediaStream}
-                />
-                <ControlPanel
-                    onClick={toggleWebcam}
-                    isWebcamOn={isWebcamOn}
-                    status={status}
-                />
+                <VideoDisplay ref={videoRef} status={status} stream={mediaStream} />
+                <div className="buttons-container">
+                    <ControlPanel onClick={toggleWebcam} isWebcamOn={isWebcamOn} status={status} />
+                    <button className="setup-pip-btn" onClick={() => setShowConfigModal(true)}>
+                        <FiSettings style={{ marginRight: '8px' }} /> {pipWindow ? 'PiP Active' : 'Setup for meeting'}
+                    </button>
+                </div>
             </section>
 
-            <TextDisplay text={translatedText} />
+            <section className="translation-section">
+                <div className="translation-box">
+                    <div className="result-text" style={{ fontSize: `${fontSize}px` }}>
+                        {translatedText && <span style={{ color: '#0d2538', display: 'block', marginBottom: '10px' }}>{translatedText}</span>}
+                        {partialWords.length > 0 && <span style={{ color: '#888', fontStyle: 'italic' }}>{partialWords.join(' ')}...</span>}
+                        {!translatedText && partialWords.length === 0 && <span style={{ color: '#ccc' }}>Waiting...</span>}
+                    </div>
+                    <div className="translation-actions">
+                        <button className="translated-text" onClick={readAloud} data-tooltip="Read translation aloud for all"><HiMiniSpeakerWave /></button>
+                        <button className="increase-font" onClick={increaseFont} data-tooltip="Increase font size"><MdOutlineTextIncrease /></button>
+                        <button className="decrease-font" onClick={decreaseFont} data-tooltip="Decrease font size"><MdOutlineTextDecrease /></button>
+                        <button className="restart-btn" onClick={restartTranslation} data-tooltip="Undo the last sentence."><VscDebugRestart /> </button>
+                    </div>
+                </div>
+            </section>
 
-            <button onClick={simulateReceive} style={{marginTop: '1rem'}}>
-                Simulate Backend Message
-            </button>
         </main>
     );
 }

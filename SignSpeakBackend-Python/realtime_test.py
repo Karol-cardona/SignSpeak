@@ -18,50 +18,28 @@ from app.model import SignLanguageTransformer
 os.environ['HF_HOME'] = os.path.join(os.getcwd(), 'hf_cache')
 
 # --- CONFIGURATION ---
-CHECKPOINT_PATH = r"checkpoints\best_model_28_11.pth"
+CHECKPOINT_PATH = r"D:\my road\Master\Smart_Application\ASL_mini\SignSpeak_TeamRepo\SignSpeakBackend-Python\checkpoints\best_model_28_11.pth"
 
 # Data & Model Parameters
 TARGET_WORDS = [
-    # Core Conversation & Greetings
-    'HELLO', 'YES', 'NO', 'PLEASE', 'THANKYOU', 'SORRY',
-    'OK', 'MAYBE', 'NICE', 'MEET', 'GREET2', 'MORE',
-
-    # People & Family
-    'I', 'YOU', 'THEY1', 'MAN', 'WOMAN1', 'BOY', 'CHILD',
-    'CHILDREN', 'FRIEND', 'PERSON', 'PEOPLE', 'FAMILY', 'MOTHER',
-    'PARENTS', 'BROTHER', 'SON', 'HUSBAND',
-    'GRANDMOTHER', 'GRANDFATHER',
-
-    # Question Words
-    'WHO', 'WHAT1', 'WHEN', 'WHERE', 'WHY', 'HOW1',
-
-    # Common Actions & Verbs
-    'EAT1', 'DRINK1', 'GO', 'COME', 'WALK2', 'RUN1',  'SEE',
-    'LOOKAT', 'HEAR2', 'LISTEN', 'WANT1',  'LOVE', 'HATE',
-    'FEEL', 'MAKE', 'WORK', 'PLAY', 'HELP', 'GIVE', 'GET', 'TELL',
-    'ASK', 'KNOW', 'THINK', 'REMEMBER1', 'LEARN', 'UNDERSTAND',
-
-    # Feelings & Descriptions
-    'HAPPY', 'SAD', 'ANGRY', 'TIRED', 'HUNGRY', 'SICK', 'SCARED', 'SURPRISE',
-    'FUNNY', 'SERIOUS', 'RIGHT1', 'WRONG', 'TRUE', 'BIG', 'SMALL', 'TALL1',
-    'PRETTY', 'CUTE1', 'UGLY', 'HOT', 'COLD', 'WARM', 'EASY', 'HARD', 'NEW',
-    'OLD', 'CLEAN', 'DIRTY',
-
-    # Places & Time
-    'HOME',  'CITY1', 'ROOM', 'KITCHEN', 'BATHROOM', 'SHOP1', 'LIBRARY',
-    'TIME', 'DAY', 'NIGHT1', 'MORNING', 'WEEK', 'MONTH', 'YEAR',
-    'TODAY', 'YESTERDAY', 'TOMORROW',
-
-    # Common Objects & Concepts
-    'WATER', 'APPLE', 'BREAD', 'MILK1', 'COFFEE', 'CAR', 'PHONE', 'COMPUTER',
-    'TV', 'BOOK', 'PAPER', 'MONEY1', 'KEY', 'DOOR', 'WINDOW', 'CHAIR',
-    'TABLE', 'COLOR', 'NAME', 'IDEA', 'STORY1', 'JOKE', 'MUSIC', 'GAME',
-
-    # Colors & Connectors
-    'RED', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'IN', 'ON', 'AT',
-    'WITH', 'FOR', 'FROM', 'ABOUT2', 'AND', 'BUT', 'BECAUSE', 'PUSH',
+    'HELLO', 'I', 'NO', 'PLEASE', 'THANKYOU', 'SORRY', 'OK', 'MAYBE', 'NICE', 'MEET',
+    'GREET2', 'MORE', 'I', 'YOU', 'THEY1', 'MAN', 'WOMAN1', 'BOY', 'CHILD',
+    'CHILDREN', 'FRIEND', 'PERSON', 'PEOPLE', 'FAMILY', 'MOTHER', 'PARENTS',
+    'BROTHER', 'SON', 'HUSBAND', 'GRANDMOTHER', 'GRANDFATHER', 'WHO', 'WHAT1',
+    'WHEN', 'WHERE', 'WHY', 'HOW1', 'EAT1', 'DRINK1', 'GO', 'COME', 'WALK2', 'RUN1',
+    'SEE', 'LOOKAT', 'HEAR2', 'LISTEN', 'WANT1', 'LOVE', 'HATE', 'FEEL', 'MAKE',
+    'WORK', 'PLAY', 'HELP', 'GIVE', 'GET', 'TELL', 'ASK', 'KNOW', 'THINK',
+    'REMEMBER1', 'LEARN', 'UNDERSTAND', 'PLEASE', 'SAD', 'ANGRY', 'TIRED', 'HUNGRY',
+    'SICK', 'SCARED', 'SURPRISE', 'FUNNY', 'SERIOUS', 'RIGHT1', 'WRONG', 'TRUE',
+    'BIG', 'SMALL', 'TALL1', 'PRETTY', 'CUTE1', 'UGLY', 'HOT', 'COLD', 'WARM',
+    'EASY', 'HARD', 'NEW', 'OLD', 'NICE', 'DIRTY', 'HOME', 'CITY1', 'ROOM',
+    'KITCHEN', 'BATHROOM', 'SHOP1', 'LIBRARY', 'YOU', 'DAY', 'NIGHT1', 'MORNING',
+    'WEEK', 'MONTH', 'YEAR', 'TODAY', 'YESTERDAY', 'TOMORROW', 'WATER', 'APPLE',
+    'BREAD', 'MILK1', 'COFFEE', 'CAR', 'PHONE', 'PUSH', 'TV', 'BOOK', 'PAPER',
+    'MONEY1', 'KEY', 'DOOR', 'WINDOW', 'CHAIR', 'TABLE', 'COLOR', 'NAME', 'IDEA',
+    'STORY1', 'JOKE', 'MUSIC', 'GAME', 'RED', 'GREEN', 'YELLOW', 'BLACK', 'WHITE',
+    'IN', 'ON', 'AT', 'WITH', 'FOR', 'FROM', 'ABOUT2', 'AND', 'BUT', 'BECAUSE', 'PUSH',
 ]
-
 # Model Parameters
 INPUT_DIM = 2 * 21 * 3
 EMBED_DIM = 256

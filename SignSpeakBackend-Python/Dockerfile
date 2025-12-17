@@ -4,23 +4,28 @@ FROM python:3.10-slim
 # Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies required for OpenCV (cv2)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
+# --- FIX: INSTALL LIGHTWEIGHT CPU PYTORCH FIRST ---
+# This prevents downloading the massive NVIDIA CUDA version that crashes your memory
+RUN pip install --no-cache-dir torch  --index-url https://download.pytorch.org/whl/cpu
+# --------------------------------------------------
+
+# Copy requirements and install the rest of the dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
 
-# Create a directory for HuggingFace cache to avoid permission errors
+# Create a directory for HuggingFace cache
 RUN mkdir -p /app/hf_cache && chmod 777 /app/hf_cache
 
-# Expose the port the API runs on
+# Expose the port
 EXPOSE 8000
 
 # Command to run the API server
