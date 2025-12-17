@@ -26,6 +26,20 @@ public class FrameBufferService {
         return sequenceCounter.getAndIncrement();
     }
 
+    /**
+     * Aggiunge un frame e controlla SUBITO se siamo pronti a inviare.
+     * Ritorna la lista di frame da inviare se il buffer è pieno, altrimenti null.
+     * Questo evita chiamate doppie o controlli esterni.
+     */
+    public List<FrameData> addFrameAndGetChunkIfReady(FrameData frameData) {
+        buffer.offer(frameData);
+
+        if (buffer.size() >= chunkThreshold) {
+            return getAndClearBuffer();
+        }
+        return null;
+    }
+
     public void addFrame(FrameData frameData) {
         buffer.offer(frameData);
     }

@@ -21,7 +21,6 @@ public class MLSystemService {
 
     private static final Logger logger = LoggerFactory.getLogger(MLSystemService.class);
 
-    // URL indicato nel README del ML (assicurati che la porta sia giusta, es. 8000)
     @Value("${ml.system.url:http://localhost:8000/api/predict_landmarks}")
     private String mlSystemUrl;
 
@@ -35,13 +34,18 @@ public class MLSystemService {
 
     /**
      * Invia un chunk di frame al ML e gestisce la risposta.
+     * Metodo rinominato per combaciare con la chiamata del Controller.
      */
-    public void processFramesAndBroadcast(String meetingId, List<FrameData> frames) {
-        if (frames.isEmpty()) return;
+    public void sendFramesToML(List<FrameData> frames) {
+        if (frames == null || frames.isEmpty()) return;
+
+        // Recuperiamo il meetingId dal primo frame del chunk per sapere dove mandare la risposta
+        String meetingId = "default";
+        if (frames.get(0).getUserInfo() != null && frames.get(0).getUserInfo().getMeetingId() != null) {
+            meetingId = frames.get(0).getUserInfo().getMeetingId();
+        }
 
         try {
-            // logger.info("Sending {} frames to ML for meeting {}", frames.size(), meetingId);
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -58,7 +62,6 @@ public class MLSystemService {
 
         } catch (Exception e) {
             logger.error("Error communicating with ML system: {}", e.getMessage());
-            // Opzionale: Inviare un errore al frontend se serve
         }
     }
 
@@ -67,19 +70,18 @@ public class MLSystemService {
         Map<String, Object> message = new HashMap<>();
 
         if ("word_added".equals(result.getStatus())) {
-            // Caso 1: Parola rilevata -> Aggiornamento parziale
             message.put("type", "PARTIAL");
-            message.put("words", result.getCurrentWords()); // Es. ["NEED", "PHONE"]
+            message.put("words", result.getCurrentWords());
             message.put("last_prediction", result.getPrediction());
 
-            logger.info("Broadcasting PARTIAL: {} to {}", result.getCurrentWords(), destination);
+            // Log ridotto per velocità
+            logger.info(">> New Word: {}", result.getPrediction());
 
         } else if ("end_of_sentence".equals(result.getStatus())) {
-            // Caso 2: Frase finita -> Sostituzione finale
             message.put("type", "FINAL");
-            message.put("text", result.getSentence()); // Es. "I need a phone."
+            message.put("text", result.getSentence());
 
-            logger.info("Broadcasting FINAL: {} to {}", result.getSentence(), destination);
+            logger.info(">> Sentence: {}", result.getSentence());
         }
 
         if (!message.isEmpty()) {
@@ -94,7 +96,6 @@ public class MLSystemService {
             logger.info("Sent RESET command to ML Service");
         } catch (Exception e) {
             logger.error("Failed to reset ML Service: {}", e.getMessage());
-
         }
     }
 }

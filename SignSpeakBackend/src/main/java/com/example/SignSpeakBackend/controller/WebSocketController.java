@@ -39,29 +39,22 @@ public class WebSocketController {
     }
 
     @MessageMapping("/frame")
-    public void receiveFrame(FrameData frameData) {
+    public void handleFrame(@Payload FrameData frameData) {
+        // 1. Assegna timestamp server-side
         frameData.setReceivedAt(System.currentTimeMillis());
         frameData.setSequenceNumber(frameBufferService.getNextSequenceNumber());
 
-        String meetingId = "default";
-        if (frameData.getUserInfo() != null) {
-            meetingId = frameData.getUserInfo().getMeetingId();
-        }
+        // 2. Aggiungi al buffer e controlla SE è pieno in un colpo solo
+        List<FrameData> chunk = frameBufferService.addFrameAndGetChunkIfReady(frameData);
 
-        frameBufferService.addFrame(frameData);
-
-        // Checking the size of the buffer
-        if (frameBufferService.getBufferSize() >= frameBufferService.getChunkThreshold()) {
-
-            List<FrameData> chunk = frameBufferService.getAndClearBuffer();
-
+        // 3. Se abbiamo un chunk pronto (es. 3 frame), lo spediamo SUBITO al Python
+        if (chunk != null && !chunk.isEmpty()) {
             if (USE_SIMULATION) {
-                // --- Simulated service ---
-                logger.info("Buffer full. Sending SIMULATED response to {}", meetingId);
-                simulatedTranslationService.sendSimulatedTranslation(meetingId);
+                // Logica simulazione...
             } else {
-                // --- Call the real ML service
-                mlSystemService.processFramesAndBroadcast(meetingId, chunk);
+                // Invio sincrono ottimizzato (Python ora è veloce)
+                // Nota: Non usiamo @Async qui per garantire l'ordine dei pacchetti
+                mlSystemService.sendFramesToML(chunk);
             }
         }
     }

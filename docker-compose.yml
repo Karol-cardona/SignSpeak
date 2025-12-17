@@ -4,18 +4,27 @@ services:
 
   signspeak-ml:
     build:
-      context: ./SignSpeak-ML
+      context: ./SignSpeakBackend-Python
       dockerfile: Dockerfile
     container_name: signspeak-ml
     env_file:
-      - ./SignSpeak-ML/.env
+      - ./SignSpeakBackend-Python/.env
     ports:
       - "8000:8000"
     environment:
-      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - GGML_CUDA=1
     volumes:
-      - ./SignSpeak-ML/app:/app/app
-      - ./SignSpeak-ML/app_models:/app/app_models
+      - ./SignSpeakBackend-Python:/app
+      - ./local_model:/app/local_model
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1 # O 'all'
+              capabilities: [gpu]
 
   signspeak-backend:
     build:
@@ -51,5 +60,6 @@ services:
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     depends_on:
       - signspeak-backend

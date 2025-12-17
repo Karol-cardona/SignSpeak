@@ -14,5 +14,10 @@ export default defineConfig({
         host: true,
         strictPort: true,
         port: 5173,
+
+        allowedHosts: [
+            "hygrophytic-aniyah-wretched.ngrok-free.dev"
+        ]
     }
+
 })

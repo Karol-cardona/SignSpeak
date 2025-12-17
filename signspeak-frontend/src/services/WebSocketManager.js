@@ -15,6 +15,8 @@ export class WebSocketManager {
 
         try {
             const socket = new SockJS('http://localhost:8080/ws');
+            //const socket = new SockJS('https://hygrophytic-aniyah-wretched.ngrok-free.dev/ws');
+
 
             socket.onclose = (event) => {
                 console.error('SockJS connection closed:', event.reason || 'Cannot connect');

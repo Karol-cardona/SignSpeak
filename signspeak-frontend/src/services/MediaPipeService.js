@@ -28,6 +28,10 @@ export class MediaPipeService {
             },
             runningMode: "VIDEO",
             numHands: 2,
+            // Aggiungiamo confidenza minima per ridurre il rumore
+            minHandDetectionConfidence: 0.7,
+            minHandPresenceConfidence: 0.7,
+            minTrackingConfidence: 0.7
         });
 
         console.log("MediaPipe HandLandmarker initialized.");
@@ -42,9 +46,74 @@ export class MediaPipeService {
             console.error("MediaPipe service is not initialized.");
             return;
         }
-
-        // Start the prediction loop
         this.predictWebcam(videoElement);
+    }
+
+    /**
+     * HELPER: Formatta i risultati per il Backend Python.
+     * Il backend (preprocessing.py) si aspetta RIGOROSAMENTE:
+     * - Index 0: Dati Mano Destra (o lista vuota)
+     * - Index 1: Dati Mano Sinistra (o lista vuota)
+     */
+    formatResults(results) {
+        let landmarksPayload = [[], []];
+        let handednessPayload = [[], []];
+
+        if (results.landmarks) {
+            for (let i = 0; i < results.landmarks.length; i++) {
+                const rawLandmarks = results.landmarks[i];
+                const handedness = results.handedness[i][0];
+
+                // --- FILTRO SMART (Polso + Dita) ---
+                const wrist = rawLandmarks[0];      // Polso
+                const indexTip = rawLandmarks[8];   // Punta Indice
+                const pinkyTip = rawLandmarks[20];  // Punta Mignolo
+
+                // Se il polso è giù (>0.9) E ANCHE le dita sono giù (>0.9)
+                // Allora la mano è morta/appoggiata -> IGNORA
+                if (wrist.y > 0.90 && indexTip.y > 0.90 && pinkyTip.y > 0.90) {
+                    continue;
+                }
+
+                let categoryName = handedness.categoryName; // "Left" o "Right"
+
+                // Se noti che le mani sono scambiate (il modello predice male quando usi una mano sola),
+                // DECOMMENTA queste righe per invertire le etichette:
+                // categoryName = (categoryName === "Right") ? "Left" : "Right";
+
+                let targetIndex = (categoryName === 'Right') ? 0 : 1;
+
+                // --- FIX 2: COORDINATE MIRRORING ---
+                // Python usa cv2.flip(1). Qui dobbiamo simularlo matematicamente.
+                // Invertiamo l'asse X:  x_new = 1.0 - x_old
+                const formattedPoints = rawLandmarks.map(lm => ({
+                    x: 1.0 - lm.x,  // <--- ECCO IL TRUCCO PER L'ACCURACY
+                    y: lm.y,
+                    z: lm.z,
+                    visibility: lm.visibility ?? 1.0
+                }));
+
+                const handInfoObj = [{
+                    score: handedness.score,
+                    index: handedness.index,
+                    categoryName: categoryName,
+                    displayName: handedness.displayName
+                }];
+
+                landmarksPayload[targetIndex] = formattedPoints;
+                handednessPayload[targetIndex] = handInfoObj;
+            }
+        }
+
+        return {
+            timestamp: performance.now(),
+            userInfo: {
+                meetingId: "default",
+                userStatus: "active"
+            },
+            landmarks: landmarksPayload,
+            handedness: handednessPayload
+        };
     }
 
     /**
@@ -52,17 +121,20 @@ export class MediaPipeService {
      */
     predictWebcam = (videoElement) => {
         const videoTime = videoElement.currentTime;
-        const timestamp = performance.now();
+        const nowInMs = performance.now();
 
         // Process the frame if it's new
         if (this.lastVideoTime !== videoTime) {
             this.lastVideoTime = videoTime;
-            // Perform landmark detection
-            this.results = this.handLandmarker.detectForVideo(videoElement, timestamp);
 
-            // Send the landmarks back to the App component
-            if (this.results.landmarks && this.results.landmarks.length > 0) {
-                this.onResultsCallback(this.results, timestamp);
+            // Perform landmark detection
+            this.results = this.handLandmarker.detectForVideo(videoElement, nowInMs);
+
+            // MODIFICA: Formattiamo SEMPRE i risultati e li inviamo, anche se vuoti.
+            // Questo permette al backend di sapere che non stai facendo gesti.
+            if (this.results) {
+                const formattedData = this.formatResults(this.results);
+                this.onResultsCallback(formattedData, nowInMs);
             }
         }
 
