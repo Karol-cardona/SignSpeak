@@ -1,4 +1,5 @@
 # SignSpeak
+SignSpeak is an AI-powered sign language interpreter tool designed to support communication during video calls. The web-based application translates American Sign Language (ASL) gestures into text and/or spoken voice through a simple webcam. Its mission is to bridge communication barriers between deaf and hearing communities by offering an intuitive, accessible, and hardware-free solution that fosters inclusive conversation
 
 ## I. **Frontend**
 The frontend is a **React (Vite)** application that manages the entire user experience and client-side processing. It runs entirely in the user's browser.
